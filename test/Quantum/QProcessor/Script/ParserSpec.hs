@@ -31,13 +31,13 @@ spec = do
       , ("delimiterInput4", delimiterInput4, delimiterSyntax4)
       , ("complexInput", complexInput, complexSyntax)
       ] $ \(name, input, syntax) ->
-        it ("should accept " ++ name) $ runVSParser (parser <* eof) input `shouldBe` Right syntax
+        it ("should accept " ++ name) $ runScriptParser (parser <* eof) input `shouldBe` Right syntax
     forM_
       [ ("multipleOperationInput", multipleOperationInput)
       , ("duplicateVariableInput", duplicateVariableInput)
       , ("undeclaredVariableInput", undeclaredVariableInput)
       ] $ \(name, input) ->
-        it ("should accept " ++ name) $ isLeft $ runVSParser (parser <* eof) input
+        it ("should accept " ++ name) $ isLeft $ runScriptParser (parser <* eof) input
 
 emptyInput :: String
 emptyInput = [q||]

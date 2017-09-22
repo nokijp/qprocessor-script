@@ -1,5 +1,6 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Quantum.QProcessor.Script.Parser
-  ( runVSParser
+  ( runScriptParser
   , parser
   ) where
 
@@ -13,23 +14,23 @@ import qualified Data.Set as S
 import Text.Parsec hiding (State)
 
 type SParser s = ParsecT String () (State s)
-type VSParser = SParser (Set String)
+type ScriptParser = SParser (Set String)
 
-runVSParser :: VSParser Syntax -> String -> Either ParseError Syntax
-runVSParser p s = evalState (runParserT p () "" s) S.empty
+runScriptParser :: ScriptParser Syntax -> String -> Either ParseError Syntax
+runScriptParser p s = evalState (runParserT p () "" s) S.empty
 
-parser :: VSParser Syntax
+parser :: ScriptParser Syntax
 parser = foldr ($) NilOp <$> statements
 
-statements :: VSParser [Syntax -> Syntax]
+statements :: ScriptParser [Syntax -> Syntax]
 statements = line `sepBy` endOfLine
 
-line :: VSParser (Syntax -> Syntax)
+line :: ScriptParser (Syntax -> Syntax)
 line = nonEolSpaces *> operation <* nonEolSpaces <* optional comment
   where
     comment = string "#" *> skipMany (satisfy (not . isEolChar)) <?> "comment"
 
-operation :: VSParser (Syntax -> Syntax)
+operation :: ScriptParser (Syntax -> Syntax)
 operation =
       transitionOperation
   <|> measureOperation
@@ -38,14 +39,14 @@ operation =
   <|> newQVarOperation
   <|> emptyOperation
 
-newQVarOperation :: VSParser (Syntax -> Syntax)
+newQVarOperation :: ScriptParser (Syntax -> Syntax)
 newQVarOperation = NewQVarOp
   <$> undeclaredQVarName <*> (nonEolSpaces *> string "=" *> nonEolSpaces *> string "newBit" *> nonEolSpaces1 *> bitValue)
   <?> "newVar statement"
     where
       bitValue = (Zero <$ char '0') <|> (One <$ char '1')
 
-transitionOperation :: VSParser (Syntax -> Syntax)
+transitionOperation :: ScriptParser (Syntax -> Syntax)
 transitionOperation = TransitionOp <$> transitionType <?> "transition statement"
   where
     transitionType =
@@ -62,29 +63,29 @@ transitionOperation = TransitionOp <$> transitionType <?> "transition statement"
     cNotTransition = CNot <$> (try (string "CNOT") *> nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName)
     toffoliTransition = Toffoli <$> (try (string "CCNOT") *> nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName)
 
-measureOperation :: VSParser (Syntax -> Syntax)
+measureOperation :: ScriptParser (Syntax -> Syntax)
 measureOperation = MeasureOp <$> (try (string "measure") *> nonEolSpaces1 *> declaredQVarName) <?> "measure statement"
 
-spyStateOperation :: VSParser (Syntax -> Syntax)
+spyStateOperation :: Stream s m Char => ParsecT s u m (Syntax -> Syntax)
 spyStateOperation = SpyStateOp <$ try (string "spyState") <?> "spyState statement"
 
-spyProbsOperation :: VSParser (Syntax -> Syntax)
+spyProbsOperation :: Stream s m Char => ParsecT s u m (Syntax -> Syntax)
 spyProbsOperation = SpyProbsOp <$ try (string "spyProbs") <?> "spyProbs statement"
 
-emptyOperation :: VSParser (Syntax -> Syntax)
+emptyOperation :: Stream s m Char => ParsecT s u m (Syntax -> Syntax)
 emptyOperation = id <$ string ""
 
-qVarName :: VSParser String
+qVarName :: Stream s m Char => ParsecT s u m String
 qVarName = many1 alphaNum <?> "variable name"
 
-declaredQVarName :: VSParser String
+declaredQVarName :: ScriptParser String
 declaredQVarName = do
   vset <- get
   n <- qVarName
   when (S.notMember n vset) $ fail (n ++ " is not declared")
   return n
 
-undeclaredQVarName :: VSParser String
+undeclaredQVarName :: ScriptParser String
 undeclaredQVarName = do
   vset <- get
   n <- qVarName
@@ -92,13 +93,13 @@ undeclaredQVarName = do
   put (S.insert n vset)
   return n
 
-nonEolSpaces :: VSParser ()
+nonEolSpaces :: Stream s m Char => ParsecT s u m ()
 nonEolSpaces = skipMany nonEolSpace
 
-nonEolSpaces1 :: VSParser ()
+nonEolSpaces1 :: Stream s m Char => ParsecT s u m ()
 nonEolSpaces1 = skipMany1 nonEolSpace
 
-nonEolSpace :: VSParser ()
+nonEolSpace:: Stream s m Char => ParsecT s u m ()
 nonEolSpace = () <$ satisfy (\c -> isSpace c && not (isEolChar c)) <?> "white space"
 
 isEolChar :: Char -> Bool
