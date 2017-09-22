@@ -6,6 +6,7 @@ module Quantum.QProcessor.Script.ParserSpec
   ) where
 
 import Test.Hspec
+import Test.Hspec.Expectations.Contrib
 
 import Quantum.QProcessor
 import Quantum.QProcessor.Script.Parser
@@ -30,10 +31,16 @@ spec = do
       , ("delimiterInput4", delimiterInput4, delimiterSyntax4)
       , ("complexInput", complexInput, complexSyntax)
       ] $ \(name, input, syntax) ->
-        it ("should accept " ++ name) $ parse (parser <* eof) "" input `shouldBe` Right syntax
+        it ("should accept " ++ name) $ runVSParser (parser <* eof) input `shouldBe` Right syntax
+    forM_
+      [ ("multipleOperationInput", multipleOperationInput)
+      , ("duplicateVariableInput", duplicateVariableInput)
+      , ("undeclaredVariableInput", undeclaredVariableInput)
+      ] $ \(name, input) ->
+        it ("should accept " ++ name) $ isLeft $ runVSParser (parser <* eof) input
 
 emptyInput :: String
-emptyInput = ""
+emptyInput = [q||]
 
 emptySyntax :: Syntax
 emptySyntax = NilOp
@@ -113,3 +120,16 @@ complexSyntax =
   $ SpyStateOp
   $ SpyProbsOp
   $ NilOp
+
+multipleOperationInput :: String
+multipleOperationInput = [q|spyState spyState|]
+
+duplicateVariableInput :: String
+duplicateVariableInput = [q|
+q = newBit 0
+measure q
+q = newBit 0
+|]
+
+undeclaredVariableInput :: String
+undeclaredVariableInput = [q|measure q|]

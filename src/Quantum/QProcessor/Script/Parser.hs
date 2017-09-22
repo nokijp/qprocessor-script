@@ -1,26 +1,35 @@
 module Quantum.QProcessor.Script.Parser
-  ( parser
+  ( runVSParser
+  , parser
   ) where
 
 import Quantum.QProcessor
 import Quantum.QProcessor.Script.Syntax
 
+import Control.Monad.State
 import Data.Char
-import Text.Parsec
-import Text.Parsec.String
+import Data.Set (Set)
+import qualified Data.Set as S
+import Text.Parsec hiding (State)
 
-parser :: Parser Syntax
+type SParser s = ParsecT String () (State s)
+type VSParser = SParser (Set String)
+
+runVSParser :: VSParser Syntax -> String -> Either ParseError Syntax
+runVSParser p s = evalState (runParserT p () "" s) S.empty
+
+parser :: VSParser Syntax
 parser = foldr ($) NilOp <$> statements
 
-statements :: Parser [Syntax -> Syntax]
+statements :: VSParser [Syntax -> Syntax]
 statements = line `sepBy` endOfLine
 
-line :: Parser (Syntax -> Syntax)
+line :: VSParser (Syntax -> Syntax)
 line = nonEolSpaces *> operation <* nonEolSpaces <* optional comment
   where
     comment = string "#" *> skipMany (satisfy (not . isEolChar)) <?> "comment"
 
-operation :: Parser (Syntax -> Syntax)
+operation :: VSParser (Syntax -> Syntax)
 operation =
       transitionOperation
   <|> measureOperation
@@ -29,14 +38,14 @@ operation =
   <|> newQVarOperation
   <|> emptyOperation
 
-newQVarOperation :: Parser (Syntax -> Syntax)
+newQVarOperation :: VSParser (Syntax -> Syntax)
 newQVarOperation = NewQVarOp
-  <$> qVarName <*> (nonEolSpaces *> string "=" *> nonEolSpaces *> string "newBit" *> nonEolSpaces1 *> bitValue)
+  <$> undeclaredQVarName <*> (nonEolSpaces *> string "=" *> nonEolSpaces *> string "newBit" *> nonEolSpaces1 *> bitValue)
   <?> "newVar statement"
     where
       bitValue = (Zero <$ char '0') <|> (One <$ char '1')
 
-transitionOperation :: Parser (Syntax -> Syntax)
+transitionOperation :: VSParser (Syntax -> Syntax)
 transitionOperation = TransitionOp <$> transitionType <?> "transition statement"
   where
     transitionType =
@@ -46,35 +55,50 @@ transitionOperation = TransitionOp <$> transitionType <?> "transition statement"
       <|> pauliZTransition
       <|> cNotTransition
       <|> toffoliTransition
-    hadamardTransition = Hadamard <$> (try (string "H") *> nonEolSpaces1 *> qVarName)
-    pauliXTransition = PauliX <$> (try (string "X") *> nonEolSpaces1 *> qVarName)
-    pauliYTransition = PauliY <$> (try (string "Y") *> nonEolSpaces1 *> qVarName)
-    pauliZTransition = PauliZ <$> (try (string "Z") *> nonEolSpaces1 *> qVarName)
-    cNotTransition = CNot <$> (try (string "CNOT") *> nonEolSpaces1 *> qVarName) <*> (nonEolSpaces1 *> qVarName)
-    toffoliTransition = Toffoli <$> (try (string "CCNOT") *> nonEolSpaces1 *> qVarName) <*> (nonEolSpaces1 *> qVarName) <*> (nonEolSpaces1 *> qVarName)
+    hadamardTransition = Hadamard <$> (try (string "H") *> nonEolSpaces1 *> declaredQVarName)
+    pauliXTransition = PauliX <$> (try (string "X") *> nonEolSpaces1 *> declaredQVarName)
+    pauliYTransition = PauliY <$> (try (string "Y") *> nonEolSpaces1 *> declaredQVarName)
+    pauliZTransition = PauliZ <$> (try (string "Z") *> nonEolSpaces1 *> declaredQVarName)
+    cNotTransition = CNot <$> (try (string "CNOT") *> nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName)
+    toffoliTransition = Toffoli <$> (try (string "CCNOT") *> nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName)
 
-measureOperation :: Parser (Syntax -> Syntax)
-measureOperation = MeasureOp <$> (try (string "measure") *> nonEolSpaces1 *> qVarName) <?> "measure statement"
+measureOperation :: VSParser (Syntax -> Syntax)
+measureOperation = MeasureOp <$> (try (string "measure") *> nonEolSpaces1 *> declaredQVarName) <?> "measure statement"
 
-spyStateOperation :: Parser (Syntax -> Syntax)
+spyStateOperation :: VSParser (Syntax -> Syntax)
 spyStateOperation = SpyStateOp <$ try (string "spyState") <?> "spyState statement"
 
-spyProbsOperation :: Parser (Syntax -> Syntax)
+spyProbsOperation :: VSParser (Syntax -> Syntax)
 spyProbsOperation = SpyProbsOp <$ try (string "spyProbs") <?> "spyProbs statement"
 
-emptyOperation :: Parser (Syntax -> Syntax)
+emptyOperation :: VSParser (Syntax -> Syntax)
 emptyOperation = id <$ string ""
 
-qVarName :: Parser String
+qVarName :: VSParser String
 qVarName = many1 alphaNum <?> "variable name"
 
-nonEolSpaces :: Parser ()
+declaredQVarName :: VSParser String
+declaredQVarName = do
+  vset <- get
+  n <- qVarName
+  when (S.notMember n vset) $ fail (n ++ " is not declared")
+  return n
+
+undeclaredQVarName :: VSParser String
+undeclaredQVarName = do
+  vset <- get
+  n <- qVarName
+  when (S.member n vset) $ fail (n ++ " is alreadly declared")
+  put (S.insert n vset)
+  return n
+
+nonEolSpaces :: VSParser ()
 nonEolSpaces = skipMany nonEolSpace
 
-nonEolSpaces1 :: Parser ()
+nonEolSpaces1 :: VSParser ()
 nonEolSpaces1 = skipMany1 nonEolSpace
 
-nonEolSpace :: Parser ()
+nonEolSpace :: VSParser ()
 nonEolSpace = () <$ satisfy (\c -> isSpace c && not (isEolChar c)) <?> "white space"
 
 isEolChar :: Char -> Bool
