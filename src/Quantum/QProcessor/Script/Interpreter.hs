@@ -21,7 +21,7 @@ import Quantum.QProcessor.Gate
 import Quantum.QProcessor.Manipulator
 import Quantum.QProcessor.Script.Syntax
 
-type RWSMManipulator w = RWST () w (Map String QVar) (MaybeT Manipulator)
+type RWSMManipulator w = RWST ([Bit] -> w, [Coef] -> w, [Double] -> w) w (Map String QVar) (MaybeT Manipulator)
 
 interpret :: Monoid w => ([Bit] -> w) -> ([Coef] -> w) -> ([Double] -> w) -> Syntax -> IO (Maybe w)
 interpret bitsToW stateToW probsToW = runManipulator . toManipulator bitsToW stateToW probsToW
@@ -40,33 +40,37 @@ interpretList = interpret ((:[]) . bitToString) ((:[]) . stateToString) ((:[]) .
     roundStr x = printf "%0.4f" x :: String
 
 toManipulator :: Monoid w => ([Bit] -> w) -> ([Coef] -> w) -> ([Double] -> w) -> Syntax -> Manipulator (Maybe w)
-toManipulator bitsToW stateToW probsToW s = runMaybeT $ snd <$> evalRWST (toManipulator' bitsToW stateToW probsToW s) () M.empty
+toManipulator bitsToW stateToW probsToW s =
+  runMaybeT $ snd <$> evalRWST (toManipulator' s) (bitsToW, stateToW, probsToW) M.empty
 
-toManipulator' :: Monoid w => ([Bit] -> w) -> ([Coef] -> w) -> ([Double] -> w) -> Syntax -> RWSMManipulator w ()
-toManipulator' bitsToW stateToW probsToW (NewQVarOp n b k) = do
+toManipulator' :: Monoid w => Syntax -> RWSMManipulator w ()
+toManipulator' (NewQVarOp n b k) = do
   q <- lift $ lift $ newQVar b
   vars <- get
   lift $ guard (M.notMember n vars)
   put $ M.insert n q vars
-  toManipulator' bitsToW stateToW probsToW k
-toManipulator' bitsToW stateToW probsToW (TransitionOp tt k) = do
+  toManipulator' k
+toManipulator' (TransitionOp tt k) = do
   t <- toTransition tt
   lift $ lift $ transition t
-  toManipulator' bitsToW stateToW probsToW k
-toManipulator' bitsToW stateToW probsToW (MeasureOp ns k) = do
+  toManipulator' k
+toManipulator' (MeasureOp ns k) = do
   qs <- mapM getQVar ns
   bs <- lift $ lift $ mapM measure qs
+  (bitsToW, _, _) <- ask
   tell $ bitsToW bs
-  toManipulator' bitsToW stateToW probsToW k
-toManipulator' bitsToW stateToW probsToW (SpyStateOp k) = do
+  toManipulator' k
+toManipulator' (SpyStateOp k) = do
   ss <- lift $ lift spyState
+  (_, stateToW, _) <- ask
   tell $ stateToW ss
-  toManipulator' bitsToW stateToW probsToW k
-toManipulator' bitsToW stateToW probsToW (SpyProbsOp k) = do
+  toManipulator' k
+toManipulator' (SpyProbsOp k) = do
   ps <- lift $ lift spyProbs
+  (_, _, probsToW) <- ask
   tell $ probsToW ps
-  toManipulator' bitsToW stateToW probsToW k
-toManipulator' _ _ _ NilOp = return ()
+  toManipulator' k
+toManipulator' NilOp = return ()
 
 toTransition :: Monoid w => TransitionType -> RWSMManipulator w Transition
 toTransition (Hadamard n) = hadamard <$> getQVar n
