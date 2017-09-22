@@ -1,30 +1,30 @@
-# QProcessor
+# QProcessorScript
 
-QProcecssor is a library written in Haskell to simulate quantum computing on a classical computer.
+```
+#!/usr/bin/env stack exec qprocessor-script-exe
 
-```haskell
-import Quantum.QProcessor.Gate
-import Quantum.QProcessor.Manipulator
+# q0: |0>--H--*--*--@==
+#             |  |
+# q1: |1>-----*--⊕--@==
+#             |
+# q2: |0>-----⊕-----@==
+q0 = newBit 0
+H q0
+spyState
+q1 = newBit 1
+q2 = newBit 0
+CCNOT q0 q1 q2
+spyState
+CNOT q0 q1
+spyState
+measure q0
+measure q2 q1
+```
 
-{-
-q0: |0>--H--*--*--@==
-            |  |
-q1: |1>-----*--⊕--@==
-            |
-q2: |0>-----⊕-----@==
--}
-program :: Manipulator [Bool]
-program = do
-  q0 <- newQVar False
-  transition $ hadamard q0
-  q1 <- newQVar True
-  q2 <- newQVar False
-  transition $ toffoli q0 q1 q2
-  transition $ cnot q0 q1
-  mapM measure [q0, q1, q2]
-
-main :: IO ()
-main = do
-  bs <- runManipulator program
-  print bs
+```aidl
+state: (0.7071 + 0.0000i)|0> + (0.7071 + 0.0000i)|1>
+state: (0.0000 + 0.0000i)|0> + (0.0000 + 0.0000i)|1> + (0.7071 + 0.0000i)|2> + (0.0000 + 0.0000i)|3> + (0.0000 + 0.0000i)|4> + (0.0000 + 0.0000i)|5> + (0.0000 + 0.0000i)|6> + (0.7071 + 0.0000i)|7>
+state: (0.0000 + 0.0000i)|0> + (0.0000 + 0.0000i)|1> + (0.7071 + 0.0000i)|2> + (0.0000 + 0.0000i)|3> + (0.0000 + 0.0000i)|4> + (0.7071 + 0.0000i)|5> + (0.0000 + 0.0000i)|6> + (0.0000 + 0.0000i)|7>
+measure: |1>
+measure: |1>|0>
 ```
