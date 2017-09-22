@@ -33,7 +33,7 @@ interpretList :: Syntax -> IO (Maybe [String])
 interpretList = interpret ((:[]) . bitToString) ((:[]) . stateToString) ((:[]) . probsToString)
   where
     bitToString b = "measure: " ++ show b
-    stateToString ss = "state: " ++ intercalate ", " (zipWith (\n s -> [qc||{n :: Int}> {complexToString s}|]) [0..] ss)
+    stateToString ss = "state: " ++ intercalate " + " (zipWith (\n s -> [qc|({complexToString s})|{n :: Int}>|]) [0..] ss)
     probsToString ps = "probs: " ++ intercalate ", " (zipWith (\n p -> [qc||{n :: Int}> {roundStr p}|]) [0..] ps)
     complexToString (x :+ y) = [qc|{roundStr x} {sign y} {roundStr (abs y)}i|] :: String
     sign x = if x >= 0 then "+" else "-"
