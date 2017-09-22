@@ -19,6 +19,6 @@ data TransitionType =
   | PauliX String
   | PauliY String
   | PauliZ String
-  | CNot String String
-  | Toffoli String String String
+  | Phase Double String
+  | Control String TransitionType
     deriving (Show, Eq)

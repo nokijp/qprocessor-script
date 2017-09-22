@@ -114,8 +114,8 @@ complexSyntax =
   $ TransitionOp (PauliX "q0")
   $ TransitionOp (PauliY "q0")
   $ TransitionOp (PauliZ "q0")
-  $ TransitionOp (CNot "q0" "q1")
-  $ TransitionOp (Toffoli "q0" "q1" "q2")
+  $ TransitionOp (Control "q0" $ PauliX "q1")
+  $ TransitionOp (Control "q0" $ Control "q1" $ PauliX "q2")
   $ MeasureOp "q0"
   $ SpyStateOp
   $ SpyProbsOp

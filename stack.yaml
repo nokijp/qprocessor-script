@@ -3,7 +3,7 @@ packages:
 - '.'
 - location:
     git: https://github.com/nokijp/qprocessor.git
-    commit: f4ca3750ef1918ad3cc03fe7fda420099e33ba94
+    commit: 866fe882ad9e67492762498fb0fbeaa5f91784f6
   extra-dep: true
 extra-deps: []
 flags: {}

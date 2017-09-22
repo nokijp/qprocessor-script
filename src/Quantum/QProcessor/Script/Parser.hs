@@ -6,7 +6,7 @@ module Quantum.QProcessor.Script.Parser
   ) where
 
 import Control.Monad.State
-import Data.Char
+import Data.Char hiding (Control)
 import Data.Set (Set)
 import qualified Data.Set as S
 import Text.Parsec hiding (State)
@@ -60,8 +60,10 @@ transitionOperation = TransitionOp <$> transitionType <?> "transition statement"
     pauliXTransition = PauliX <$> (try (string "X") *> nonEolSpaces1 *> declaredQVarName)
     pauliYTransition = PauliY <$> (try (string "Y") *> nonEolSpaces1 *> declaredQVarName)
     pauliZTransition = PauliZ <$> (try (string "Z") *> nonEolSpaces1 *> declaredQVarName)
-    cNotTransition = CNot <$> (try (string "CNOT") *> nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName)
-    toffoliTransition = Toffoli <$> (try (string "CCNOT") *> nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName)
+    cNotTransition = cnot <$> (try (string "CNOT") *> nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName)
+    toffoliTransition = toffoli <$> (try (string "CCNOT") *> nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName)
+    cnot c t = Control c (PauliX t)
+    toffoli c1 c2 t = Control c1 (cnot c2 t)
 
 measureOperation :: ScriptParser (Syntax -> Syntax)
 measureOperation = MeasureOp <$> (try (string "measure") *> nonEolSpaces1 *> declaredQVarName) <?> "measure statement"

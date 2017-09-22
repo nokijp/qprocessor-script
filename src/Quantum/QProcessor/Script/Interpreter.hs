@@ -10,7 +10,7 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.RWS
-import Data.Complex
+import Data.Complex hiding (phase)
 import Data.List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
@@ -73,8 +73,8 @@ toTransition (Hadamard n) = hadamard <$> getQVar n
 toTransition (PauliX n) = pauliX <$> getQVar n
 toTransition (PauliY n) = pauliY <$> getQVar n
 toTransition (PauliZ n) = pauliZ <$> getQVar n
-toTransition (CNot n1 n2) = cnot <$> getQVar n1 <*> getQVar n2
-toTransition (Toffoli n1 n2 n3) = toffoli <$> getQVar n1 <*> getQVar n2 <*> getQVar n3
+toTransition (Phase t n) = phase t <$> getQVar n
+toTransition (Control n tt) = control <$> getQVar n <*> toTransition tt
 
 getQVar :: Monoid w => String -> RWSMManipulator w QVar
 getQVar n = get >>= lift . MaybeT . return . M.lookup n

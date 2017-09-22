@@ -38,6 +38,7 @@ simpleSyntax =
   $ SpyStateOp
   $ TransitionOp (Hadamard "q1")
   $ NewQVarOp "q2" Zero
+  $ TransitionOp (Control "q1" (PauliX "q2"))
   $ SpyProbsOp
   $ NilOp
 
@@ -45,7 +46,7 @@ simpleOutput :: [String]
 simpleOutput =
   [ "measure: |1>"
   , "state: (0.0000 + 0.0000i)|0> + (0.0000 - 1.0000i)|1> + (0.0000 + 0.0000i)|2> + (0.0000 + 0.0000i)|3>"
-  , "probs: |0> 0.0000, |1> 0.5000, |2> 0.0000, |3> 0.5000, |4> 0.0000, |5> 0.0000, |6> 0.0000, |7> 0.0000"
+  , "probs: |0> 0.0000, |1> 0.5000, |2> 0.0000, |3> 0.0000, |4> 0.0000, |5> 0.0000, |6> 0.0000, |7> 0.5000"
   ]
 
 duplicateVariableSyntax :: Syntax
