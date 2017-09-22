@@ -58,6 +58,7 @@ transitionOperation = TransitionOp <$> transitionType <?> "transition statement"
       <|> phaseTransition
       <|> cNotTransition
       <|> toffoliTransition
+      <|> controlledTransition
     hadamardTransition = Hadamard <$> (try (string "H") *> nonEolSpaces1 *> declaredQVarName)
     pauliXTransition = PauliX <$> (try (string "X") *> nonEolSpaces1 *> declaredQVarName)
     pauliYTransition = PauliY <$> (try (string "Y") *> nonEolSpaces1 *> declaredQVarName)
@@ -65,6 +66,7 @@ transitionOperation = TransitionOp <$> transitionType <?> "transition statement"
     phaseTransition = Phase <$> (try (string "R") *> nonEolSpaces1 *> float) <*> (nonEolSpaces1 *> declaredQVarName)
     cNotTransition = cnot <$> (try (string "CNOT") *> nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName)
     toffoliTransition = toffoli <$> (try (string "CCNOT") *> nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName)
+    controlledTransition = Control <$> (try (string "control") *> nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> quote transitionType)
     cnot c t = Control c (PauliX t)
     toffoli c1 c2 t = Control c1 (cnot c2 t)
 
@@ -109,3 +111,6 @@ nonEolSpace = () <$ satisfy (\c -> isSpace c && not (isEolChar c)) <?> "white sp
 
 isEolChar :: Char -> Bool
 isEolChar c = c == '\r' || c == '\n'
+
+quote :: Stream s m Char => ParsecT s u m a -> ParsecT s u m a
+quote p = string "(" *> nonEolSpaces *> p <* nonEolSpaces <* string ")"

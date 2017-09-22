@@ -101,6 +101,8 @@ Z q0
 R 0.5 q0
 CNOT q0 q1
 CCNOT q0 q1 q2
+control q0 (H q1)
+control q0 (control q1 (H q2))
 measure q0
 spyState
 spyProbs
@@ -118,6 +120,8 @@ complexSyntax =
   $ TransitionOp (Phase 0.5 "q0")
   $ TransitionOp (Control "q0" $ PauliX "q1")
   $ TransitionOp (Control "q0" $ Control "q1" $ PauliX "q2")
+  $ TransitionOp (Control "q0" $ Hadamard "q1")
+  $ TransitionOp (Control "q0" $ Control "q1" $ Hadamard "q2")
   $ MeasureOp "q0"
   $ SpyStateOp
   $ SpyProbsOp
