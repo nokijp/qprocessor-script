@@ -1,17 +1,17 @@
 {-# LANGUAGE FlexibleContexts #-}
+
 module Quantum.QProcessor.Script.Parser
   ( runScriptParser
   , parser
   ) where
-
-import Quantum.QProcessor
-import Quantum.QProcessor.Script.Syntax
 
 import Control.Monad.State
 import Data.Char
 import Data.Set (Set)
 import qualified Data.Set as S
 import Text.Parsec hiding (State)
+import Quantum.QProcessor
+import Quantum.QProcessor.Script.Syntax
 
 type SParser s = ParsecT String () (State s)
 type ScriptParser = SParser (Set String)
