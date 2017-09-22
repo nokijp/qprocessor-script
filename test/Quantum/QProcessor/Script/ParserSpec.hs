@@ -28,6 +28,7 @@ spec = do
       , ("delimiterInput2", delimiterInput2, delimiterSyntax2)
       , ("delimiterInput3", delimiterInput3, delimiterSyntax3)
       , ("delimiterInput4", delimiterInput4, delimiterSyntax4)
+      , ("complexInput", complexInput, complexSyntax)
       ] $ \(name, input, syntax) ->
         it ("should accept " ++ name) $ parse (parser <* eof) "" input `shouldBe` Right syntax
 
@@ -49,13 +50,13 @@ delimiterInput1 = [q|  # comment
 
 q0 = newBit 0  # comment
 
-q1 = newBit 1# comment
-q2 = newBit 0#
+  q1= newBit 1# comment
+q2 =  newBit 0#
 
 #comment|]
 
 delimiterSyntax1 :: Syntax
-delimiterSyntax1 = NewQVarOp "q0" Zero (NewQVarOp "q1" One (NewQVarOp "q2" Zero NilOp))
+delimiterSyntax1 = NewQVarOp "q0" Zero $ NewQVarOp "q1" One $ NewQVarOp "q2" Zero NilOp
 
 delimiterInput2 :: String
 delimiterInput2 = [q|# comment
@@ -76,7 +77,39 @@ delimiterSyntax3 :: Syntax
 delimiterSyntax3 = NewQVarOp "q" Zero NilOp
 
 delimiterInput4 :: String
-delimiterInput4 = "# comment"
+delimiterInput4 = [q|# comment|]
 
 delimiterSyntax4 :: Syntax
 delimiterSyntax4 = NilOp
+
+complexInput :: String
+complexInput = [q|
+q0 = newBit 0
+q1 = newBit 0
+q2 = newBit 0
+H q0
+X q0
+Y q0
+Z q0
+CNOT q0 q1
+CCNOT q0 q1 q2
+measure q0
+spyState
+spyProbs
+|]
+
+complexSyntax :: Syntax
+complexSyntax =
+    NewQVarOp "q0" Zero
+  $ NewQVarOp "q1" Zero
+  $ NewQVarOp "q2" Zero
+  $ TransitionOp (Hadamard "q0")
+  $ TransitionOp (PauliX "q0")
+  $ TransitionOp (PauliY "q0")
+  $ TransitionOp (PauliZ "q0")
+  $ TransitionOp (CNot "q0" "q1")
+  $ TransitionOp (Toffoli "q0" "q1" "q2")
+  $ MeasureOp "q0"
+  $ SpyStateOp
+  $ SpyProbsOp
+  $ NilOp

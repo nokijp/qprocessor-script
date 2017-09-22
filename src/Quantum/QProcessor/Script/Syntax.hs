@@ -6,13 +6,13 @@ module Quantum.QProcessor.Script.Syntax
 import Quantum.QProcessor
 
 data Syntax =
-    NilOp
-  | NewQVarOp String Bit Syntax
+    NewQVarOp String Bit Syntax
   | TransitionOp TransitionType Syntax
   | MeasureOp String Syntax
   | SpyStateOp Syntax
   | SpyProbsOp Syntax
-  deriving (Show, Eq)
+  | NilOp
+    deriving (Show, Eq)
 
 data TransitionType =
     Hadamard String
@@ -21,4 +21,4 @@ data TransitionType =
   | PauliZ String
   | CNot String String
   | Toffoli String String String
-  deriving (Show, Eq)
+    deriving (Show, Eq)
