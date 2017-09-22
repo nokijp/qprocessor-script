@@ -8,7 +8,7 @@ import Quantum.QProcessor
 data Syntax =
     NewQVarOp String Bit Syntax
   | TransitionOp TransitionType Syntax
-  | MeasureOp String Syntax
+  | MeasureOp [String] Syntax
   | SpyStateOp Syntax
   | SpyProbsOp Syntax
   | NilOp

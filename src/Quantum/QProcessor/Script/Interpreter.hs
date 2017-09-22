@@ -23,8 +23,8 @@ import Quantum.QProcessor.Script.Syntax
 
 type RWSMManipulator w = RWST () w (Map String QVar) (MaybeT Manipulator)
 
-interpret :: Monoid w => (Bit -> w) -> ([Coef] -> w) -> ([Double] -> w) -> Syntax -> IO (Maybe w)
-interpret bitToW stateToW probsToW = runManipulator . toManipulator bitToW stateToW probsToW
+interpret :: Monoid w => ([Bit] -> w) -> ([Coef] -> w) -> ([Double] -> w) -> Syntax -> IO (Maybe w)
+interpret bitsToW stateToW probsToW = runManipulator . toManipulator bitsToW stateToW probsToW
 
 interpretIO :: Syntax -> IO ()
 interpretIO s = interpretList s >>= maybe (fail "invalid syntax") (mapM_ putStrLn)
@@ -32,40 +32,40 @@ interpretIO s = interpretList s >>= maybe (fail "invalid syntax") (mapM_ putStrL
 interpretList :: Syntax -> IO (Maybe [String])
 interpretList = interpret ((:[]) . bitToString) ((:[]) . stateToString) ((:[]) . probsToString)
   where
-    bitToString b = "measure: " ++ show b
+    bitToString bs = "measure: " ++ foldMap show bs
     stateToString ss = "state: " ++ intercalate " + " (zipWith (\n s -> [qc|({complexToString s})|{n :: Int}>|]) [0..] ss)
     probsToString ps = "probs: " ++ intercalate ", " (zipWith (\n p -> [qc||{n :: Int}> {roundStr p}|]) [0..] ps)
     complexToString (x :+ y) = [qc|{roundStr x} {sign y} {roundStr (abs y)}i|] :: String
     sign x = if x >= 0 then "+" else "-"
     roundStr x = printf "%0.4f" x :: String
 
-toManipulator :: Monoid w => (Bit -> w) -> ([Coef] -> w) -> ([Double] -> w) -> Syntax -> Manipulator (Maybe w)
-toManipulator bitToW stateToW probsToW s = runMaybeT $ snd <$> evalRWST (toManipulator' bitToW stateToW probsToW s) () M.empty
+toManipulator :: Monoid w => ([Bit] -> w) -> ([Coef] -> w) -> ([Double] -> w) -> Syntax -> Manipulator (Maybe w)
+toManipulator bitsToW stateToW probsToW s = runMaybeT $ snd <$> evalRWST (toManipulator' bitsToW stateToW probsToW s) () M.empty
 
-toManipulator' :: Monoid w => (Bit -> w) -> ([Coef] -> w) -> ([Double] -> w) -> Syntax -> RWSMManipulator w ()
-toManipulator' bitToW stateToW probsToW (NewQVarOp n b k) = do
+toManipulator' :: Monoid w => ([Bit] -> w) -> ([Coef] -> w) -> ([Double] -> w) -> Syntax -> RWSMManipulator w ()
+toManipulator' bitsToW stateToW probsToW (NewQVarOp n b k) = do
   q <- lift $ lift $ newQVar b
   vars <- get
   lift $ guard (M.notMember n vars)
   put $ M.insert n q vars
-  toManipulator' bitToW stateToW probsToW k
-toManipulator' bitToW stateToW probsToW (TransitionOp tt k) = do
+  toManipulator' bitsToW stateToW probsToW k
+toManipulator' bitsToW stateToW probsToW (TransitionOp tt k) = do
   t <- toTransition tt
   lift $ lift $ transition t
-  toManipulator' bitToW stateToW probsToW k
-toManipulator' bitToW stateToW probsToW (MeasureOp n k) = do
-  q <- getQVar n
-  b <- lift $ lift $ measure q
-  tell $ bitToW b
-  toManipulator' bitToW stateToW probsToW k
-toManipulator' bitToW stateToW probsToW (SpyStateOp k) = do
+  toManipulator' bitsToW stateToW probsToW k
+toManipulator' bitsToW stateToW probsToW (MeasureOp ns k) = do
+  qs <- mapM getQVar ns
+  bs <- lift $ lift $ mapM measure qs
+  tell $ bitsToW bs
+  toManipulator' bitsToW stateToW probsToW k
+toManipulator' bitsToW stateToW probsToW (SpyStateOp k) = do
   ss <- lift $ lift spyState
   tell $ stateToW ss
-  toManipulator' bitToW stateToW probsToW k
-toManipulator' bitToW stateToW probsToW (SpyProbsOp k) = do
+  toManipulator' bitsToW stateToW probsToW k
+toManipulator' bitsToW stateToW probsToW (SpyProbsOp k) = do
   ps <- lift $ lift spyProbs
   tell $ probsToW ps
-  toManipulator' bitToW stateToW probsToW k
+  toManipulator' bitsToW stateToW probsToW k
 toManipulator' _ _ _ NilOp = return ()
 
 toTransition :: Monoid w => TransitionType -> RWSMManipulator w Transition

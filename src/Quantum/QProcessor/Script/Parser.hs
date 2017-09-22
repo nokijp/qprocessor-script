@@ -71,7 +71,7 @@ transitionOperation = TransitionOp <$> transitionType <?> "transition statement"
     toffoli c1 c2 t = Control c1 (cnot c2 t)
 
 measureOperation :: ScriptParser (Syntax -> Syntax)
-measureOperation = MeasureOp <$> (try (string "measure") *> nonEolSpaces1 *> declaredQVarName) <?> "measure statement"
+measureOperation = MeasureOp <$> (try (string "measure") *> many1 (nonEolSpaces1 *> declaredQVarName)) <?> "measure statement"
 
 spyStateOperation :: Stream s m Char => ParsecT s u m (Syntax -> Syntax)
 spyStateOperation = SpyStateOp <$ try (string "spyState") <?> "spyState statement"

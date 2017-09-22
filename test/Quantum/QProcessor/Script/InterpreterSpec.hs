@@ -32,8 +32,10 @@ spec = do
 simpleSyntax :: Syntax
 simpleSyntax =
     NewQVarOp "q0" One
-  $ MeasureOp "q0"
-  $ NewQVarOp "q1" One
+  $ MeasureOp ["q0"]
+  $ NewQVarOp "q1" Zero
+  $ MeasureOp ["q0", "q1"]
+  $ TransitionOp (PauliX "q1")
   $ TransitionOp (PauliY "q1")
   $ SpyStateOp
   $ TransitionOp (Hadamard "q1")
@@ -45,6 +47,7 @@ simpleSyntax =
 simpleOutput :: [String]
 simpleOutput =
   [ "measure: |1>"
+  , "measure: |1>|0>"
   , "state: (0.0000 + 0.0000i)|0> + (0.0000 - 1.0000i)|1> + (0.0000 + 0.0000i)|2> + (0.0000 + 0.0000i)|3>"
   , "probs: |0> 0.0000, |1> 0.5000, |2> 0.0000, |3> 0.0000, |4> 0.0000, |5> 0.0000, |6> 0.0000, |7> 0.5000"
   ]
@@ -53,4 +56,4 @@ duplicateVariableSyntax :: Syntax
 duplicateVariableSyntax = NewQVarOp "q" One $ NewQVarOp "q" One NilOp
 
 undeclaredVariableSyntax :: Syntax
-undeclaredVariableSyntax = MeasureOp "q1" NilOp
+undeclaredVariableSyntax = MeasureOp ["q1"] NilOp

@@ -104,6 +104,7 @@ CCNOT q0 q1 q2
 control q0 (H q1)
 control q0 (control q1 (H q2))
 measure q0
+measure q0 q1 q2
 spyState
 spyProbs
 |]
@@ -122,7 +123,8 @@ complexSyntax =
   $ TransitionOp (Control "q0" $ Control "q1" $ PauliX "q2")
   $ TransitionOp (Control "q0" $ Hadamard "q1")
   $ TransitionOp (Control "q0" $ Control "q1" $ Hadamard "q2")
-  $ MeasureOp "q0"
+  $ MeasureOp ["q0"]
+  $ MeasureOp ["q0", "q1", "q2"]
   $ SpyStateOp
   $ SpyProbsOp
   $ NilOp
