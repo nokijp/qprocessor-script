@@ -23,14 +23,14 @@ import Quantum.QProcessor.Script.Syntax
 
 type RWSMManipulator w = RWST ([Bit] -> w, [Coef] -> w, [Double] -> w) w (Map String QVar) (MaybeT Manipulator)
 
-interpret :: Monoid w => ([Bit] -> w) -> ([Coef] -> w) -> ([Double] -> w) -> Syntax -> IO (Maybe w)
-interpret bitsToW stateToW probsToW = runManipulator . toManipulator bitsToW stateToW probsToW
+interpret :: Monoid w => ([Bit] -> w, [Coef] -> w, [Double] -> w) -> Syntax -> IO (Maybe w)
+interpret fs = runManipulator . toManipulator fs
 
 interpretIO :: Syntax -> IO ()
 interpretIO s = interpretList s >>= maybe (fail "invalid syntax") (mapM_ putStrLn)
 
 interpretList :: Syntax -> IO (Maybe [String])
-interpretList = interpret ((:[]) . bitToString) ((:[]) . stateToString) ((:[]) . probsToString)
+interpretList = interpret ((:[]) . bitToString, (:[]) . stateToString, (:[]) . probsToString)
   where
     bitToString bs = "measure: " ++ foldMap show bs
     stateToString ss = "state: " ++ intercalate " + " (zipWith (\n s -> [qc|({complexToString s})|{n :: Int}>|]) [0..] ss)
@@ -39,9 +39,8 @@ interpretList = interpret ((:[]) . bitToString) ((:[]) . stateToString) ((:[]) .
     sign x = if x >= 0 then "+" else "-"
     roundStr x = printf "%0.4f" x :: String
 
-toManipulator :: Monoid w => ([Bit] -> w) -> ([Coef] -> w) -> ([Double] -> w) -> Syntax -> Manipulator (Maybe w)
-toManipulator bitsToW stateToW probsToW s =
-  runMaybeT $ snd <$> evalRWST (toManipulator' s) (bitsToW, stateToW, probsToW) M.empty
+toManipulator :: Monoid w => ([Bit] -> w, [Coef] -> w, [Double] -> w) -> Syntax -> Manipulator (Maybe w)
+toManipulator fs s = runMaybeT $ snd <$> evalRWST (toManipulator' s) fs M.empty
 
 toManipulator' :: Monoid w => Syntax -> RWSMManipulator w ()
 toManipulator' (NewQVarOp n b k) = do
