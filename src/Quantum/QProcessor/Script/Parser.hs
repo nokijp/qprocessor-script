@@ -12,6 +12,7 @@ import qualified Data.Set as S
 import Text.Parsec hiding (State)
 import Quantum.QProcessor
 import Quantum.QProcessor.Script.Syntax
+import Quantum.QProcessor.Script.Internal.ParserCombinators
 
 type SParser s = ParsecT String () (State s)
 type ScriptParser = SParser (Set String)
@@ -41,7 +42,7 @@ operation =
 
 newQVarOperation :: ScriptParser (Syntax -> Syntax)
 newQVarOperation = NewQVarOp
-  <$> undeclaredQVarName <*> (nonEolSpaces *> string "=" *> nonEolSpaces *> string "newBit" *> nonEolSpaces1 *> bitValue)
+  <$> undeclaredQVarName <*> (nonEolSpaces *> string "=" *> nonEolSpaces *> try (string "newBit") *> nonEolSpaces1 *> bitValue)
   <?> "newVar statement"
     where
       bitValue = (Zero <$ char '0') <|> (One <$ char '1')
@@ -54,12 +55,14 @@ transitionOperation = TransitionOp <$> transitionType <?> "transition statement"
       <|> pauliXTransition
       <|> pauliYTransition
       <|> pauliZTransition
+      <|> phaseTransition
       <|> cNotTransition
       <|> toffoliTransition
     hadamardTransition = Hadamard <$> (try (string "H") *> nonEolSpaces1 *> declaredQVarName)
     pauliXTransition = PauliX <$> (try (string "X") *> nonEolSpaces1 *> declaredQVarName)
     pauliYTransition = PauliY <$> (try (string "Y") *> nonEolSpaces1 *> declaredQVarName)
     pauliZTransition = PauliZ <$> (try (string "Z") *> nonEolSpaces1 *> declaredQVarName)
+    phaseTransition = Phase <$> (try (string "R") *> nonEolSpaces1 *> float) <*> (nonEolSpaces1 *> declaredQVarName)
     cNotTransition = cnot <$> (try (string "CNOT") *> nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName)
     toffoliTransition = toffoli <$> (try (string "CCNOT") *> nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName)
     cnot c t = Control c (PauliX t)
@@ -101,7 +104,7 @@ nonEolSpaces = skipMany nonEolSpace
 nonEolSpaces1 :: Stream s m Char => ParsecT s u m ()
 nonEolSpaces1 = skipMany1 nonEolSpace
 
-nonEolSpace:: Stream s m Char => ParsecT s u m ()
+nonEolSpace :: Stream s m Char => ParsecT s u m ()
 nonEolSpace = () <$ satisfy (\c -> isSpace c && not (isEolChar c)) <?> "white space"
 
 isEolChar :: Char -> Bool

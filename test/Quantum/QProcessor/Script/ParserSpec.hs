@@ -37,7 +37,7 @@ spec = do
       , ("duplicateVariableInput", duplicateVariableInput)
       , ("undeclaredVariableInput", undeclaredVariableInput)
       ] $ \(name, input) ->
-        it ("should accept " ++ name) $ isLeft $ runScriptParser (parser <* eof) input
+        it ("should return an error when given " ++ name) $ isLeft $ runScriptParser (parser <* eof) input
 
 emptyInput :: String
 emptyInput = [q||]
@@ -98,6 +98,7 @@ H q0
 X q0
 Y q0
 Z q0
+R 0.5 q0
 CNOT q0 q1
 CCNOT q0 q1 q2
 measure q0
@@ -114,6 +115,7 @@ complexSyntax =
   $ TransitionOp (PauliX "q0")
   $ TransitionOp (PauliY "q0")
   $ TransitionOp (PauliZ "q0")
+  $ TransitionOp (Phase 0.5 "q0")
   $ TransitionOp (Control "q0" $ PauliX "q1")
   $ TransitionOp (Control "q0" $ Control "q1" $ PauliX "q2")
   $ MeasureOp "q0"

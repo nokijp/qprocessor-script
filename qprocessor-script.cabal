@@ -8,6 +8,7 @@ library
   exposed-modules:     Quantum.QProcessor.Script.Interpreter
                      , Quantum.QProcessor.Script.Parser
                      , Quantum.QProcessor.Script.Syntax
+                     , Quantum.QProcessor.Script.Internal.ParserCombinators
   build-depends:       base >= 4.7 && < 5
                      , qprocessor
                      , mtl
@@ -24,6 +25,7 @@ test-suite qprocessor-script-test
   main-is:             Spec.hs
   other-modules:       Quantum.QProcessor.Script.InterpreterSpec
                      , Quantum.QProcessor.Script.ParserSpec
+                     , Quantum.QProcessor.Script.Internal.ParserCombinatorsSpec
   build-depends:       base >= 4.7 && < 5
                      , hspec == 2.*
                      , hspec-expectations
