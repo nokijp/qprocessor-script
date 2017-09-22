@@ -22,11 +22,11 @@ line = nonEolSpaces *> operation <* nonEolSpaces <* optional comment
 
 operation :: Parser (Syntax -> Syntax)
 operation =
-      try newQVarOperation
-  <|> try transitionOperation
-  <|> try measureOperation
-  <|> try spyStateOperation
-  <|> try spyProbsOperation
+      transitionOperation
+  <|> measureOperation
+  <|> spyStateOperation
+  <|> spyProbsOperation
+  <|> newQVarOperation
   <|> emptyOperation
 
 newQVarOperation :: Parser (Syntax -> Syntax)
@@ -40,27 +40,27 @@ transitionOperation :: Parser (Syntax -> Syntax)
 transitionOperation = TransitionOp <$> transitionType <?> "transition statement"
   where
     transitionType =
-          try hadamardTransition
-      <|> try pauliXTransition
-      <|> try pauliYTransition
-      <|> try pauliZTransition
-      <|> try cNotTransition
+          hadamardTransition
+      <|> pauliXTransition
+      <|> pauliYTransition
+      <|> pauliZTransition
+      <|> cNotTransition
       <|> toffoliTransition
-    hadamardTransition = Hadamard <$> (string "H" *> nonEolSpaces1 *> qVarName)
-    pauliXTransition = PauliX <$> (string "X" *> nonEolSpaces1 *> qVarName)
-    pauliYTransition = PauliY <$> (string "Y" *> nonEolSpaces1 *> qVarName)
-    pauliZTransition = PauliZ <$> (string "Z" *> nonEolSpaces1 *> qVarName)
-    cNotTransition = CNot <$> (string "CNOT" *> nonEolSpaces1 *> qVarName) <*> (nonEolSpaces1 *> qVarName)
-    toffoliTransition = Toffoli <$> (string "CCNOT" *> nonEolSpaces1 *> qVarName) <*> (nonEolSpaces1 *> qVarName) <*> (nonEolSpaces1 *> qVarName)
+    hadamardTransition = Hadamard <$> (try (string "H") *> nonEolSpaces1 *> qVarName)
+    pauliXTransition = PauliX <$> (try (string "X") *> nonEolSpaces1 *> qVarName)
+    pauliYTransition = PauliY <$> (try (string "Y") *> nonEolSpaces1 *> qVarName)
+    pauliZTransition = PauliZ <$> (try (string "Z") *> nonEolSpaces1 *> qVarName)
+    cNotTransition = CNot <$> (try (string "CNOT") *> nonEolSpaces1 *> qVarName) <*> (nonEolSpaces1 *> qVarName)
+    toffoliTransition = Toffoli <$> (try (string "CCNOT") *> nonEolSpaces1 *> qVarName) <*> (nonEolSpaces1 *> qVarName) <*> (nonEolSpaces1 *> qVarName)
 
 measureOperation :: Parser (Syntax -> Syntax)
-measureOperation = MeasureOp <$> (string "measure" *> nonEolSpaces1 *> qVarName) <?> "measure statement"
+measureOperation = MeasureOp <$> (try (string "measure") *> nonEolSpaces1 *> qVarName) <?> "measure statement"
 
 spyStateOperation :: Parser (Syntax -> Syntax)
-spyStateOperation = SpyStateOp <$ string "spyState" <?> "spyState statement"
+spyStateOperation = SpyStateOp <$ try (string "spyState") <?> "spyState statement"
 
 spyProbsOperation :: Parser (Syntax -> Syntax)
-spyProbsOperation = SpyProbsOp <$ string "spyProbs" <?> "spyProbs statement"
+spyProbsOperation = SpyProbsOp <$ try (string "spyProbs") <?> "spyProbs statement"
 
 emptyOperation :: Parser (Syntax -> Syntax)
 emptyOperation = id <$ string ""
