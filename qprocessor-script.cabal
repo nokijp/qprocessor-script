@@ -1,0 +1,30 @@
+name:                qprocessor-script
+version:             0.1.0.0
+build-type:          Simple
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Quantum.QProcessor.Script.Parser
+                     , Quantum.QProcessor.Script.Syntax
+  build-depends:       base >= 4.7 && < 5
+                     , qprocessor
+                     , mtl
+                     , parsec == 3.*
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall -Werror -O
+  default-language:    Haskell2010
+
+test-suite qprocessor-script-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  other-modules:       Quantum.QProcessor.Script.ParserSpec
+  build-depends:       base >= 4.7 && < 5
+                     , hspec == 2.*
+                     , qprocessor
+                     , qprocessor-script
+                     , interpolatedstring-perl6
+                     , mtl
+                     , parsec == 3.*
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
+  default-language:    Haskell2010

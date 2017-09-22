@@ -1,0 +1,9 @@
+resolver: lts-6.15
+packages:
+- '.'
+- location:
+    git: https://github.com/nokijp/qprocessor.git
+    commit: 8257936a18781b3bb8af0be0c8e307987ea46313
+  extra-dep: true
+extra-deps: []
+flags: {}
