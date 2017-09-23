@@ -67,7 +67,7 @@ transitionOperation = TransitionOp <$> transitionType <?> "transition statement"
     cNotTransition = cnot <$> (try (string "CNOT") *> nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName)
     toffoliTransition = toffoli <$> (try (string "CCNOT") *> nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName)
     controlledTransition = Control <$> (try (string "control") *> nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> quote transitionType)
-    cnot c t = Control c (PauliX t)
+    cnot c t = Control c (Not t)
     toffoli c1 c2 t = Control c1 (cnot c2 t)
 
 measureOperation :: ScriptParser (Syntax -> Syntax)

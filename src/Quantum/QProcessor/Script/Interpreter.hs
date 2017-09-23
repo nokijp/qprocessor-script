@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, QuasiQuotes, ExtendedDefaultRules #-}
+{-# LANGUAGE QuasiQuotes, ExtendedDefaultRules #-}
 
 module Quantum.QProcessor.Script.Interpreter
   ( interpret
@@ -77,6 +77,7 @@ toTransition (PauliX n) = pauliX <$> getQVar n
 toTransition (PauliY n) = pauliY <$> getQVar n
 toTransition (PauliZ n) = pauliZ <$> getQVar n
 toTransition (Phase t n) = phase t <$> getQVar n
+toTransition (Not n) = pauliX <$> getQVar n
 toTransition (Control n tt) = control <$> getQVar n <*> toTransition tt
 
 getQVar :: Monoid w => String -> RWSMManipulator w QVar

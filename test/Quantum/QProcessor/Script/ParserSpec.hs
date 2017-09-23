@@ -29,7 +29,7 @@ spec = do
       , ("delimiterInput2", delimiterInput2, delimiterSyntax2)
       , ("delimiterInput3", delimiterInput3, delimiterSyntax3)
       , ("delimiterInput4", delimiterInput4, delimiterSyntax4)
-      , ("complexInput", complexInput, complexSyntax)
+      , ("allOpsInput", allOpsInput, allOpsSyntax)
       ] $ \(name, input, syntax) ->
         it ("should accept " ++ name) $ runScriptParser (parser <* eof) input `shouldBe` Right syntax
     forM_
@@ -89,11 +89,11 @@ delimiterInput4 = [q|# comment|]
 delimiterSyntax4 :: Syntax
 delimiterSyntax4 = NilOp
 
-complexInput :: String
-complexInput = [q|
+allOpsInput :: String
+allOpsInput = [q|
 q0 = newBit 0
 q1 = newBit 0
-q2 = newBit 0
+q2 = newBit 1
 H q0
 X q0
 Y q0
@@ -101,28 +101,28 @@ Z q0
 R 0.5 q0
 CNOT q0 q1
 CCNOT q0 q1 q2
-control q0 (H q1)
-control q0 (control q1 (H q2))
+control q0 (X q1)
+control q0 (control q1 (X q2))
 measure q0
 measure q0 q1 q2
 spyState
 spyProbs
 |]
 
-complexSyntax :: Syntax
-complexSyntax =
+allOpsSyntax :: Syntax
+allOpsSyntax =
     NewQVarOp "q0" Zero
   $ NewQVarOp "q1" Zero
-  $ NewQVarOp "q2" Zero
+  $ NewQVarOp "q2" One
   $ TransitionOp (Hadamard "q0")
   $ TransitionOp (PauliX "q0")
   $ TransitionOp (PauliY "q0")
   $ TransitionOp (PauliZ "q0")
   $ TransitionOp (Phase 0.5 "q0")
+  $ TransitionOp (Control "q0" $ Not "q1")
+  $ TransitionOp (Control "q0" $ Control "q1" $ Not "q2")
   $ TransitionOp (Control "q0" $ PauliX "q1")
   $ TransitionOp (Control "q0" $ Control "q1" $ PauliX "q2")
-  $ TransitionOp (Control "q0" $ Hadamard "q1")
-  $ TransitionOp (Control "q0" $ Control "q1" $ Hadamard "q2")
   $ MeasureOp ["q0"]
   $ MeasureOp ["q0", "q1", "q2"]
   $ SpyStateOp

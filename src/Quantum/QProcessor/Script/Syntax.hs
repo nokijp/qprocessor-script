@@ -20,5 +20,6 @@ data TransitionType =
   | PauliY String
   | PauliZ String
   | Phase Double String
+  | Not String
   | Control String TransitionType
     deriving (Show, Eq)
