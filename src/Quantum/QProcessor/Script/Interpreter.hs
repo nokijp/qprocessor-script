@@ -2,8 +2,9 @@
 
 module Quantum.QProcessor.Script.Interpreter
   ( interpret
-  , interpretIO
   , interpretList
+  , unsafeInterpretIO
+  , unsafeInterpretList
   ) where
 
 import Control.Lens
@@ -13,6 +14,7 @@ import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.RWS
 import Data.Complex hiding (phase)
 import Data.List
+import Data.Maybe
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Text.InterpolatedString.Perl6 (qc)
@@ -31,9 +33,6 @@ type RWSMManipulator w = RWST ([Bit] -> w, [Coef] -> w, [Double] -> w, [Bit] -> 
 interpret :: Monoid w => ([Bit] -> w, [Coef] -> w, [Double] -> w, [Bit] -> [DiagramElem] -> w) -> Syntax -> IO (Maybe w)
 interpret fs = runManipulator . toManipulator fs
 
-interpretIO :: Syntax -> IO ()
-interpretIO s = interpretList s >>= maybe (fail "invalid syntax") (mapM_ putStrLn)
-
 interpretList :: Syntax -> IO (Maybe [String])
 interpretList = interpret ((:[]) . bitToString, (:[]) . stateToString, (:[]) . probsToString, \bs es -> [diagram bs es])
   where
@@ -42,6 +41,12 @@ interpretList = interpret ((:[]) . bitToString, (:[]) . stateToString, (:[]) . p
     probsToString ps = "probs: " ++ intercalate ", " (zipWith (\n p -> [qc||{n :: Int}> {roundStr p}|]) [0..] ps)
     complexToString (x :+ y) = [qc|{roundStr x} {sign y} {roundStr (abs y)}i|] :: String
     sign x = if x >= 0 then "+" else "-"
+
+unsafeInterpretIO :: Syntax -> IO ()
+unsafeInterpretIO s = interpretList s >>= maybe (fail "invalid syntax") (mapM_ putStrLn)
+
+unsafeInterpretList :: Syntax -> IO [String]
+unsafeInterpretList s = fromMaybe (fail "invalid syntax") <$> interpretList s
 
 toManipulator :: Monoid w => ([Bit] -> w, [Coef] -> w, [Double] -> w, [Bit] -> [DiagramElem] -> w) -> Syntax -> Manipulator (Maybe w)
 toManipulator fs s = runMaybeT $ snd <$> evalRWST (toManipulator' s) fs (IState M.empty [] [])

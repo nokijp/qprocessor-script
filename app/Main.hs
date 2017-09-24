@@ -15,7 +15,7 @@ route _ = printHelp
 runScript :: String -> IO ()
 runScript script = do
   let result = runScriptParser (parser <* eof) script
-  either (hPrint stderr) interpretIO result
+  either (hPrint stderr) unsafeInterpretIO result
 
 printHelp :: IO ()
 printHelp = do
