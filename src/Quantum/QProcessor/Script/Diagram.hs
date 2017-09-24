@@ -18,7 +18,7 @@ diagram :: [Bit] -> [DiagramElem] -> String
 diagram bs es = intercalate "\n" $ takeLane laneStringsWithBits gapLaneStringsWithBits
   where
     bitNum = length bs
-    (lanes, gapLanes) = diagramLanes (V.replicate bitNum V.empty) (V.replicate (bitNum - 1) V.empty) 0 es
+    (lanes, gapLanes) = diagramLanes (V.replicate bitNum V.empty) (V.replicate (bitNum - 1) V.empty) (-1) es
     widths = signWidths lanes
     laneStrings = V.toList $ laneString '-' widths <$> lanes
     gapLaneStrings = V.toList $ laneString ' ' widths <$> gapLanes
@@ -69,11 +69,11 @@ diagramLanes lanes gapLanes measurePos (DiagramTransition sign cs t : es) = diag
       if i >= minLane && i < maxLane
       then gapLane V.++ V.replicate (pos - V.length gapLane) Nothing `V.snoc` Just "|"
       else gapLane
-diagramLanes lanes gapLanes measurePos (DiagramMeasure ts : es) = diagramLanes newLanes gapLanes (measurePos + 1) es
+diagramLanes lanes gapLanes measurePos (DiagramMeasure ts : es) = diagramLanes newLanes gapLanes pos es
   where
     minLane = minimum ts
     maxLane = maximum ts
-    pos = measurePos `max` maximum ((V.length . (lanes V.!)) <$> [minLane..maxLane])
+    pos = (measurePos + 1) `max` maximum ((V.length . (lanes V.!)) <$> [minLane..maxLane])
     newLanes = flip V.imap lanes $ \i lane ->
       if i `elem` ts
       then lane V.++ V.replicate (pos - V.length lane) Nothing `V.snoc` Just "@"

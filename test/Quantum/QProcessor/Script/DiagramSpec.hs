@@ -22,7 +22,8 @@ spec = do
       , ("emptyLaneElems", emptyLaneBits, emptyLaneElems, emptyLaneOutput)
       , ("singleLaneElems", singleLaneBits, singleLaneElems, singleLaneOutput)
       , ("allOpsElems", allOpsBits, allOpsElems, allOpsOutput)
-      , ("measurementElems", measurementBits, measurementElems, measurementOutput)
+      , ("measurementElems1", measurementBits1, measurementElems1, measurementOutput1)
+      , ("measurementElems2", measurementBits2, measurementElems2, measurementOutput2)
       , ("collapsingElems", collapsingBits, collapsingElems, collapsingOutput)
       ] $ \(name, bits, elems, output) ->
         it ("can convert " ++ show name ++ " to a diagram") $ diagram bits elems `shouldBe` output
@@ -80,23 +81,38 @@ allOpsOutput = intercalate "\n"
   , "|1>----------------------------⊕-----X--@--@--"
   ]
 
-measurementBits :: [Bit]
-measurementBits = [Zero, Zero, Zero]
-measurementElems :: [DiagramElem]
-measurementElems =
+measurementBits1 :: [Bit]
+measurementBits1 = [Zero, Zero, Zero]
+measurementElems1 :: [DiagramElem]
+measurementElems1 =
   [ DiagramMeasure [0]
   , DiagramMeasure [1]
   , DiagramMeasure [2]
   , DiagramMeasure [0, 1]
   , DiagramMeasure [2]
   ]
-measurementOutput :: String
-measurementOutput = intercalate "\n"
+measurementOutput1 :: String
+measurementOutput1 = intercalate "\n"
   [ "|0>--@--------@-----"
   , "                    "
   , "|0>-----@-----@-----"
   , "                    "
   , "|0>--------@-----@--"
+  ]
+
+measurementBits2 :: [Bit]
+measurementBits2 = [Zero, Zero]
+measurementElems2 :: [DiagramElem]
+measurementElems2 =
+  [ DiagramTransition "H" [] 0
+  , DiagramMeasure [0]
+  , DiagramMeasure [1]
+  ]
+measurementOutput2 :: String
+measurementOutput2 = intercalate "\n"
+  [ "|0>--H--@-----"
+  , "              "
+  , "|0>--------@--"
   ]
 
 collapsingBits :: [Bit]
