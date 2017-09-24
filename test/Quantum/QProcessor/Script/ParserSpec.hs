@@ -107,6 +107,7 @@ measure q0
 measure q0 q1 q2
 spyState
 spyProbs
+diagram
 |]
 
 allOpsSyntax :: Syntax
@@ -127,6 +128,7 @@ allOpsSyntax =
   $ MeasureOp ["q0", "q1", "q2"]
   $ SpyStateOp
   $ SpyProbsOp
+  $ DiagramOp
   $ NilOp
 
 multipleOperationInput :: String

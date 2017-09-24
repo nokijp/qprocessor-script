@@ -39,7 +39,7 @@ signWidths lanes =
         maybe 0 length $ join $ (lanes V.! laneIndex) V.!? signIndex
 
 laneString :: Char -> Vector Int -> Vector (Maybe String) -> String
-laneString emptySign widths lane = connector ++ foldr (++) "" signStrs
+laneString emptySign widths lane = connector ++ concat signStrs
   where
     connector = replicate 2 emptySign
     signStrs = flip V.imap widths $ \i width ->

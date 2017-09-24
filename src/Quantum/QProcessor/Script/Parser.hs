@@ -37,6 +37,7 @@ operation =
   <|> measureOperation
   <|> spyStateOperation
   <|> spyProbsOperation
+  <|> diagramOperation
   <|> newQVarOperation
   <|> emptyOperation
 
@@ -78,6 +79,9 @@ spyStateOperation = SpyStateOp <$ try (string "spyState") <?> "spyState statemen
 
 spyProbsOperation :: Stream s m Char => ParsecT s u m (Syntax -> Syntax)
 spyProbsOperation = SpyProbsOp <$ try (string "spyProbs") <?> "spyProbs statement"
+
+diagramOperation :: Stream s m Char => ParsecT s u m (Syntax -> Syntax)
+diagramOperation = DiagramOp <$ try (string "diagram") <?> "diagram statement"
 
 emptyOperation :: Stream s m Char => ParsecT s u m (Syntax -> Syntax)
 emptyOperation = id <$ string ""

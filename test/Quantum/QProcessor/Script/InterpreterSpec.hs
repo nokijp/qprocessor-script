@@ -5,6 +5,7 @@ module Quantum.QProcessor.Script.InterpreterSpec
 
 import Test.Hspec
 
+import Data.List
 import Quantum.QProcessor
 import Quantum.QProcessor.Script.Interpreter
 import Quantum.QProcessor.Script.Syntax
@@ -19,6 +20,7 @@ spec = do
   describe "interpretList" $ do
     forM_
       [ ("simpleSyntax", simpleSyntax, simpleOutput)
+      , ("allOpsSyntax", allOpsSyntax, allOpsOutput)
       ] $ \(name, syntax, output) -> do
         actualOutput <- runIO $ interpretList syntax
         it ("can interpret " ++ name) $ actualOutput `shouldBe` Just output
@@ -42,6 +44,7 @@ simpleSyntax =
   $ NewQVarOp "q2" Zero
   $ TransitionOp (Control "q1" (PauliX "q2"))
   $ SpyProbsOp
+  $ DiagramOp
   $ NilOp
 
 simpleOutput :: [String]
@@ -50,6 +53,45 @@ simpleOutput =
   , "measure: |1>|0>"
   , "state: (0.0000 + 0.0000i)|0> + (0.0000 - 1.0000i)|1> + (0.0000 + 0.0000i)|2> + (0.0000 + 0.0000i)|3>"
   , "probs: |0> 0.0000, |1> 0.5000, |2> 0.0000, |3> 0.0000, |4> 0.0000, |5> 0.0000, |6> 0.0000, |7> 0.5000"
+  , intercalate "\n"
+      [ "|1>--@--@--------------"
+      , "                       "
+      , "|0>-----@--X--Y--H--*--"
+      , "                    |  "
+      , "|0>-----------------X--"
+      ]
+  ]
+
+allOpsSyntax :: Syntax
+allOpsSyntax =
+    NewQVarOp "q0" Zero
+  $ NewQVarOp "q1" Zero
+  $ NewQVarOp "q2" One
+  $ MeasureOp ["q0", "q1", "q2"]
+  $ SpyStateOp
+  $ SpyProbsOp
+  $ TransitionOp (Hadamard "q0")
+  $ TransitionOp (PauliX "q0")
+  $ TransitionOp (PauliY "q0")
+  $ TransitionOp (PauliZ "q0")
+  $ TransitionOp (Phase 0.5 "q0")
+  $ TransitionOp (Not "q0")
+  $ TransitionOp (Control "q0" (Control "q1" (Not "q2")))
+  $ DiagramOp
+  $ NilOp
+
+allOpsOutput :: [String]
+allOpsOutput =
+  [ "measure: |0>|0>|1>"
+  , "state: (0.0000 + 0.0000i)|0> + (0.0000 + 0.0000i)|1> + (0.0000 + 0.0000i)|2> + (0.0000 + 0.0000i)|3> + (1.0000 + 0.0000i)|4> + (0.0000 + 0.0000i)|5> + (0.0000 + 0.0000i)|6> + (0.0000 + 0.0000i)|7>"
+  , "probs: |0> 0.0000, |1> 0.0000, |2> 0.0000, |3> 0.0000, |4> 1.0000, |5> 0.0000, |6> 0.0000, |7> 0.0000"
+  , intercalate "\n"
+      [ "|0>--@--H--X--Y--Z--R(0.5000)--⊕--*--"
+      , "                                  |  "
+      , "|0>--@----------------------------*--"
+      , "                                  |  "
+      , "|1>--@----------------------------⊕--"
+      ]
   ]
 
 duplicateVariableSyntax :: Syntax
