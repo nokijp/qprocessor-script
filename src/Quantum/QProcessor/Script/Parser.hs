@@ -5,20 +5,19 @@ module Quantum.QProcessor.Script.Parser
   , parser
   ) where
 
-import Control.Monad.State
+import Control.Monad
 import Data.Char hiding (Control)
 import Data.Set (Set)
 import qualified Data.Set as S
-import Text.Parsec hiding (State)
+import Text.Parsec
 import Quantum.QProcessor
 import Quantum.QProcessor.Script.Syntax
 import Quantum.QProcessor.Script.Internal.ParserCombinators
 
-type SParser s = ParsecT String () (State s)
-type ScriptParser = SParser (Set String)
+type ScriptParser = Parsec String (Set String)
 
 runScriptParser :: ScriptParser Syntax -> String -> Either ParseError Syntax
-runScriptParser p s = evalState (runParserT p () "" s) S.empty
+runScriptParser p = runParser p S.empty ""
 
 parser :: ScriptParser Syntax
 parser = foldr ($) NilOp <$> statements
@@ -29,7 +28,7 @@ statements = line `sepBy` endOfLine
 line :: ScriptParser (Syntax -> Syntax)
 line = nonEolSpaces *> operation <* nonEolSpaces <* optional comment
   where
-    comment = string "#" *> skipMany (satisfy (not . isEolChar)) <?> "comment"
+    comment = string "#" *> skipMany (satisfy notEolChar) <?> "comment"
 
 operation :: ScriptParser (Syntax -> Syntax)
 operation =
@@ -67,7 +66,7 @@ transitionOperation = TransitionOp <$> transitionType <?> "transition statement"
     phaseTransition = Phase <$> (try (string "R") *> nonEolSpaces1 *> float) <*> (nonEolSpaces1 *> declaredQVarName)
     cNotTransition = cnot <$> (try (string "CNOT") *> nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName)
     toffoliTransition = toffoli <$> (try (string "CCNOT") *> nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> declaredQVarName)
-    controlledTransition = Control <$> (try (string "control") *> nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> quote transitionType)
+    controlledTransition = Control <$> (try (string "control") *> nonEolSpaces1 *> declaredQVarName) <*> (nonEolSpaces1 *> parens transitionType)
     cnot c t = Control c (Not t)
     toffoli c1 c2 t = Control c1 (cnot c2 t)
 
@@ -91,17 +90,17 @@ qVarName = many1 alphaNum <?> "variable name"
 
 declaredQVarName :: ScriptParser String
 declaredQVarName = do
-  vset <- get
+  vset <- getState
   n <- qVarName
   when (S.notMember n vset) $ fail (n ++ " is not declared")
   return n
 
 undeclaredQVarName :: ScriptParser String
 undeclaredQVarName = do
-  vset <- get
+  vset <- getState
   n <- qVarName
   when (S.member n vset) $ fail (n ++ " is alreadly declared")
-  put (S.insert n vset)
+  putState (S.insert n vset)
   return n
 
 nonEolSpaces :: Stream s m Char => ParsecT s u m ()
@@ -111,10 +110,10 @@ nonEolSpaces1 :: Stream s m Char => ParsecT s u m ()
 nonEolSpaces1 = skipMany1 nonEolSpace
 
 nonEolSpace :: Stream s m Char => ParsecT s u m ()
-nonEolSpace = () <$ satisfy (\c -> isSpace c && not (isEolChar c)) <?> "white space"
+nonEolSpace = () <$ satisfy (\c -> isSpace c && notEolChar c) <?> "white space"
 
-isEolChar :: Char -> Bool
-isEolChar c = c == '\r' || c == '\n'
+notEolChar :: Char -> Bool
+notEolChar c = c /= '\r' && c /= '\n'
 
-quote :: Stream s m Char => ParsecT s u m a -> ParsecT s u m a
-quote p = string "(" *> nonEolSpaces *> p <* nonEolSpaces <* string ")"
+parens :: Stream s m Char => ParsecT s u m a -> ParsecT s u m a
+parens p = string "(" *> nonEolSpaces *> p <* nonEolSpaces <* string ")"
