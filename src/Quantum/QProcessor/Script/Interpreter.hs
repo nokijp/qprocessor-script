@@ -1,7 +1,8 @@
 {-# LANGUAGE QuasiQuotes, ExtendedDefaultRules, TemplateHaskell #-}
 
 module Quantum.QProcessor.Script.Interpreter
-  ( interpret
+  ( InterpreterOutput
+  , interpret
   , interpretList
   , unsafeInterpretIO
   , unsafeInterpretList
@@ -12,11 +13,14 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.RWS
+import Data.Bits
 import Data.Complex hiding (phase)
 import Data.List
 import Data.Maybe
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
+import qualified Data.Vector.Unboxed as V
+import qualified Data.Vector.Unboxed.Mutable as MV
 import Text.InterpolatedString.Perl6 (qc)
 import Text.Printf
 import Quantum.QProcessor
@@ -25,20 +29,30 @@ import Quantum.QProcessor.Manipulator
 import Quantum.QProcessor.Script.Diagram
 import Quantum.QProcessor.Script.Syntax
 
+data InterpreterOutput =
+    MeasureOutput [Bit]
+  | SpyStateOutput [Coef]
+  | SpyProbsOutput [Double]
+  | SpyProbsPartialOutput [Double]
+  | DiagramOutput [Bit] [DiagramElem]
+
 data IState = IState { _declaredQVars :: Map String QVar, _initialBits :: [Bit], _diagramElems :: [DiagramElem] }
 makeLenses ''IState
 
-type RWSMManipulator w = RWST ([Bit] -> w, [Coef] -> w, [Double] -> w, [Bit] -> [DiagramElem] -> w) w IState (MaybeT Manipulator)
+type RWSMManipulator w = RWST (InterpreterOutput -> w) w IState (MaybeT Manipulator)
 
-interpret :: Monoid w => ([Bit] -> w, [Coef] -> w, [Double] -> w, [Bit] -> [DiagramElem] -> w) -> Syntax -> IO (Maybe w)
-interpret fs = runManipulator . toManipulator fs
+interpret :: Monoid w => (InterpreterOutput -> w) -> Syntax -> IO (Maybe w)
+interpret f = runManipulator . toManipulator f
 
 interpretList :: Syntax -> IO (Maybe [String])
-interpretList = interpret ((:[]) . bitToString, (:[]) . stateToString, (:[]) . probsToString, \bs es -> [diagram bs es])
+interpretList = interpret toMonoid
   where
-    bitToString bs = "measure: " ++ foldMap show bs
-    stateToString ss = "state: " ++ intercalate " + " (zipWith (\n s -> [qc|({complexToString s})|{n :: Int}>|]) [0..] ss)
-    probsToString ps = "probs: " ++ intercalate ", " (zipWith (\n p -> [qc||{n :: Int}> {roundStr p}|]) [0..] ps)
+    toMonoid (MeasureOutput bs)= return $ "measure: " ++ foldMap show bs
+    toMonoid (SpyStateOutput ss) = return $ "state: " ++ intercalate " + " (zipWith (\n s -> [qc|({complexToString s})|{n :: Int}>|]) [0..] ss)
+    toMonoid (SpyProbsOutput ps) = probsToMonoid ps
+    toMonoid (SpyProbsPartialOutput ps) = probsToMonoid ps
+    toMonoid (DiagramOutput bs es) = return $ diagram bs es
+    probsToMonoid ps = return $ "probs: " ++ intercalate ", " (zipWith (\n p -> [qc||{n :: Int}> {roundStr p}|]) [0..] ps)
     complexToString (x :+ y) = [qc|{roundStr x} {sign y} {roundStr (abs y)}i|] :: String
     sign x = if x >= 0 then "+" else "-"
 
@@ -48,8 +62,8 @@ unsafeInterpretIO s = interpretList s >>= maybe (fail "invalid syntax") (mapM_ p
 unsafeInterpretList :: Syntax -> IO [String]
 unsafeInterpretList s = fromMaybe (fail "invalid syntax") <$> interpretList s
 
-toManipulator :: Monoid w => ([Bit] -> w, [Coef] -> w, [Double] -> w, [Bit] -> [DiagramElem] -> w) -> Syntax -> Manipulator (Maybe w)
-toManipulator fs s = runMaybeT $ snd <$> evalRWST (toManipulator' s) fs (IState M.empty [] [])
+toManipulator :: Monoid w => (InterpreterOutput -> w) -> Syntax -> Manipulator (Maybe w)
+toManipulator f s = runMaybeT $ snd <$> evalRWST (toManipulator' s) f (IState M.empty [] [])
 
 toManipulator' :: Monoid w => Syntax -> RWSMManipulator w ()
 toManipulator' (NewQVarOp n b k) = do
@@ -66,24 +80,30 @@ toManipulator' (TransitionOp tt k) = do
 toManipulator' (MeasureOp ns k) = do
   qs <- mapM getQVar ns
   bs <- lift $ lift $ mapM measure qs
-  (bitsToW, _, _, _) <- ask
-  tell $ bitsToW bs
+  toMonoid <- ask
+  tell $ toMonoid $ MeasureOutput bs
   modify $ \iState -> iState & diagramElems %~ (DiagramMeasure (qVarToIndex <$> qs) :)
   toManipulator' k
 toManipulator' (SpyStateOp k) = do
   ss <- lift $ lift spyState
-  (_, stateToW, _, _) <- ask
-  tell $ stateToW ss
+  toMonoid <- ask
+  tell $ toMonoid $ SpyStateOutput ss
   toManipulator' k
 toManipulator' (SpyProbsOp k) = do
   ps <- lift $ lift spyProbs
-  (_, _, probsToW, _) <- ask
-  tell $ probsToW ps
+  toMonoid <- ask
+  tell $ toMonoid $ SpyProbsOutput ps
+  toManipulator' k
+toManipulator' (SpyProbsPartialOp ns k) = do
+  qs <- mapM getQVar ns
+  ps <- lift $ lift spyProbs
+  toMonoid <- ask
+  tell $ toMonoid $ SpyProbsPartialOutput $ marginalize (qVarToIndex <$> qs) ps
   toManipulator' k
 toManipulator' (DiagramOp k) = do
   iState <- get
-  (_, _, _, diagramElemsToW) <- ask
-  tell $ diagramElemsToW (reverse $ iState ^. initialBits) (reverse $ iState ^. diagramElems)
+  toMonoid <- ask
+  tell $ toMonoid $ DiagramOutput (reverse $ iState ^. initialBits) (reverse $ iState ^. diagramElems)
   toManipulator' k
 toManipulator' NilOp = return ()
 
@@ -117,6 +137,14 @@ getQVar n = do
 
 qVarToIndex :: QVar -> Int
 qVarToIndex (QVar n) = n
+
+marginalize :: [Int] -> [Double] -> [Double]
+marginalize bitIndices probs = V.toList $ V.create $ do
+    v <- MV.replicate (1 `shift` length bitIndices) 0
+    forM_ (zip [0..] probs) $ \(n, p) -> do
+      let shrinkedIndex = sum $ zipWith (\sourceBitIndex targetBitIndex -> ((n `shiftR` sourceBitIndex) .&. 1) `shiftL` targetBitIndex) bitIndices [0..]
+      MV.modify v (+p) shrinkedIndex
+    return v
 
 roundStr :: Double -> String
 roundStr = printf "%0.4f"

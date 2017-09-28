@@ -35,7 +35,8 @@ spec = do
     forM_
       [ ("multipleOperationInput", multipleOperationInput)
       , ("duplicateVariableInput", duplicateVariableInput)
-      , ("undeclaredVariableInput", undeclaredVariableInput)
+      , ("undeclaredVariableInput1", undeclaredVariableInput1)
+      , ("undeclaredVariableInput2", undeclaredVariableInput2)
       ] $ \(name, input) ->
         it ("should return an error when given " ++ name) $ isLeft $ runScriptParser (parser <* eof) input
 
@@ -107,6 +108,9 @@ measure q0
 measure q0 q1 q2
 spyState
 spyProbs
+spyProbs #
+spyProbs q0
+spyProbs q0 q1
 diagram
 |]
 
@@ -128,6 +132,9 @@ allOpsSyntax =
   $ MeasureOp ["q0", "q1", "q2"]
   $ SpyStateOp
   $ SpyProbsOp
+  $ SpyProbsOp
+  $ SpyProbsPartialOp ["q0"]
+  $ SpyProbsPartialOp ["q0", "q1"]
   $ DiagramOp
   $ NilOp
 
@@ -141,5 +148,8 @@ measure q
 q = newBit 0
 |]
 
-undeclaredVariableInput :: String
-undeclaredVariableInput = [q|measure q|]
+undeclaredVariableInput1 :: String
+undeclaredVariableInput1 = [q|measure q|]
+
+undeclaredVariableInput2 :: String
+undeclaredVariableInput2 = [q|spyProbs q|]

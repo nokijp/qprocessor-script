@@ -76,8 +76,8 @@ measureOperation = MeasureOp <$> (try (string "measure") *> many1 (nonEolSpaces1
 spyStateOperation :: Stream s m Char => ParsecT s u m (Syntax -> Syntax)
 spyStateOperation = SpyStateOp <$ try (string "spyState") <?> "spyState statement"
 
-spyProbsOperation :: Stream s m Char => ParsecT s u m (Syntax -> Syntax)
-spyProbsOperation = SpyProbsOp <$ try (string "spyProbs") <?> "spyProbs statement"
+spyProbsOperation :: ScriptParser (Syntax -> Syntax)
+spyProbsOperation = (try (string "spyProbs") *> (try (SpyProbsPartialOp <$> many1 (nonEolSpaces1 *> declaredQVarName)) <|> return SpyProbsOp)) <?> "spyProbs statement"
 
 diagramOperation :: Stream s m Char => ParsecT s u m (Syntax -> Syntax)
 diagramOperation = DiagramOp <$ try (string "diagram") <?> "diagram statement"

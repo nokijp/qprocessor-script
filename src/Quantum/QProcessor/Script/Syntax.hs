@@ -11,6 +11,7 @@ data Syntax =
   | MeasureOp [String] Syntax
   | SpyStateOp Syntax
   | SpyProbsOp Syntax
+  | SpyProbsPartialOp [String] Syntax
   | DiagramOp Syntax
   | NilOp
     deriving (Show, Eq)

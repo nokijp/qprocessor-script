@@ -21,6 +21,7 @@ spec = do
     forM_
       [ ("simpleSyntax", simpleSyntax, simpleOutput)
       , ("allOpsSyntax", allOpsSyntax, allOpsOutput)
+      , ("spyProbsPartialSyntax", spyProbsPartialSyntax, spyProbsPartialOutput)
       ] $ \(name, syntax, output) -> do
         actualOutput <- runIO $ interpretList syntax
         it ("can interpret " ++ name) $ actualOutput `shouldBe` Just output
@@ -70,6 +71,7 @@ allOpsSyntax =
   $ MeasureOp ["q0", "q1", "q2"]
   $ SpyStateOp
   $ SpyProbsOp
+  $ SpyProbsPartialOp ["q0"]
   $ TransitionOp (Hadamard "q0")
   $ TransitionOp (PauliX "q0")
   $ TransitionOp (PauliY "q0")
@@ -85,6 +87,7 @@ allOpsOutput =
   [ "measure: |0>|0>|1>"
   , "state: (0.0000 + 0.0000i)|0> + (0.0000 + 0.0000i)|1> + (0.0000 + 0.0000i)|2> + (0.0000 + 0.0000i)|3> + (1.0000 + 0.0000i)|4> + (0.0000 + 0.0000i)|5> + (0.0000 + 0.0000i)|6> + (0.0000 + 0.0000i)|7>"
   , "probs: |0> 0.0000, |1> 0.0000, |2> 0.0000, |3> 0.0000, |4> 1.0000, |5> 0.0000, |6> 0.0000, |7> 0.0000"
+  , "probs: |0> 1.0000, |1> 0.0000"
   , intercalate "\n"
       [ "|0>--@--H--X--Y--Z--R(0.5000)--⊕--*--"
       , "                                  |  "
@@ -92,6 +95,38 @@ allOpsOutput =
       , "                                  |  "
       , "|1>--@----------------------------⊕--"
       ]
+  ]
+
+spyProbsPartialSyntax :: Syntax
+spyProbsPartialSyntax =
+    NewQVarOp "q0" Zero
+  $ NewQVarOp "q1" One
+  $ NewQVarOp "q2" Zero
+  $ SpyProbsPartialOp ["q0"]
+  $ SpyProbsPartialOp ["q0", "q1"]
+  $ SpyProbsPartialOp ["q1", "q0"]
+  $ SpyProbsPartialOp ["q0", "q0", "q0", "q0"]
+  $ TransitionOp (Hadamard "q0")
+  $ TransitionOp (Hadamard "q1")
+  $ TransitionOp (Control "q0" (Not "q2"))
+  $ SpyProbsPartialOp ["q0"]
+  $ SpyProbsPartialOp ["q0", "q1"]
+  $ SpyProbsPartialOp ["q0", "q2"]
+  $ SpyProbsPartialOp ["q0", "q1", "q2"]
+  $ SpyProbsPartialOp ["q0", "q0", "q0", "q0"]
+  $ NilOp
+
+spyProbsPartialOutput :: [String]
+spyProbsPartialOutput =
+  [ "probs: |0> 1.0000, |1> 0.0000"
+  , "probs: |0> 0.0000, |1> 0.0000, |2> 1.0000, |3> 0.0000"
+  , "probs: |0> 0.0000, |1> 1.0000, |2> 0.0000, |3> 0.0000"
+  , "probs: |0> 1.0000, |1> 0.0000, |2> 0.0000, |3> 0.0000, |4> 0.0000, |5> 0.0000, |6> 0.0000, |7> 0.0000, |8> 0.0000, |9> 0.0000, |10> 0.0000, |11> 0.0000, |12> 0.0000, |13> 0.0000, |14> 0.0000, |15> 0.0000"
+  , "probs: |0> 0.5000, |1> 0.5000"
+  , "probs: |0> 0.2500, |1> 0.2500, |2> 0.2500, |3> 0.2500"
+  , "probs: |0> 0.5000, |1> 0.0000, |2> 0.0000, |3> 0.5000"
+  , "probs: |0> 0.2500, |1> 0.0000, |2> 0.2500, |3> 0.0000, |4> 0.0000, |5> 0.2500, |6> 0.0000, |7> 0.2500"
+  , "probs: |0> 0.5000, |1> 0.0000, |2> 0.0000, |3> 0.0000, |4> 0.0000, |5> 0.0000, |6> 0.0000, |7> 0.0000, |8> 0.0000, |9> 0.0000, |10> 0.0000, |11> 0.0000, |12> 0.0000, |13> 0.0000, |14> 0.0000, |15> 0.5000"
   ]
 
 duplicateVariableSyntax :: Syntax
